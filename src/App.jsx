@@ -1,6 +1,6 @@
 // React & React Router
 import React, { useState, useEffect, useMemo } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { HashRouter, Routes, Route } from "react-router-dom";
 
 // Icons
 import { SettingsIcon } from "./components/Icons.jsx";
@@ -150,7 +150,7 @@ function App() {
   }
 
   return (
-    <BrowserRouter>
+    <HashRouter>
       <div className="min-h-screen bg-gray-100 dark:bg-gray-900 font-sans text-gray-900 dark:text-gray-100 antialiased p-4 sm:p-8">
         <div className="max-w-6xl mx-auto rounded-xl shadow-2xl overflow-hidden bg-white dark:bg-gray-800">
           <div>
@@ -312,7 +312,7 @@ function App() {
           />
         </div>
       </div>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
 

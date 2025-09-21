@@ -20,6 +20,7 @@ const FridgePage = ({ roommates }) => {
   } = useFridgeInventory();
 
   const [editingItem, setEditingItem] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const itemTypes = ["Fridge", "Freezer", "Pantry", "Personal", "Spices"];
 
   const isExpired = (expires) => {
@@ -56,6 +57,29 @@ const FridgePage = ({ roommates }) => {
       .toISOString()
       .split("T")[0];
   };
+
+  const downloadCSV = () => {
+    if (!filteredFridgeInventory.length) return;
+
+    // Only include the 'name' field
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      ["Ingredient"]
+        .concat(filteredFridgeInventory.map((item) => item.name))
+        .join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "fridge_inventory.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const displayedInventory = filteredFridgeInventory.filter((item) =>
+    item.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="p-4 sm:p-6 bg-gray-50 dark:bg-gray-700 rounded-xl shadow-lg">
@@ -530,9 +554,26 @@ const FridgePage = ({ roommates }) => {
         </label>
       </div>
 
+      <button
+        onClick={downloadCSV}
+        className="mb-4 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+      >
+        Download Filtered CSV
+      </button>
+
+      <div className="mb-4">
+        <input
+          type="text"
+          placeholder="Search items..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full p-3 rounded-lg border bg-white dark:bg-gray-900"
+        />
+      </div>
+
       {/* Inventory List */}
       <ul className="space-y-3">
-        {filteredFridgeInventory.map((item) => (
+        {displayedInventory.map((item) => (
           <li
             key={item.id}
             className={`p-3 rounded-lg ${
@@ -587,7 +628,7 @@ const FridgePage = ({ roommates }) => {
             )}
           </li>
         ))}
-        {filteredFridgeInventory.length === 0 && (
+        {displayedInventory.length === 0 && (
           <p className="text-center text-gray-500 dark:text-gray-400">
             No items found.
           </p>
