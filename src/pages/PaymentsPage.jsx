@@ -12,6 +12,7 @@ const PaymentsPage = ({
   roommates,
 }) => {
   const [editingId, setEditingId] = useState(null);
+  const [openRows, setOpenRows] = useState({});
 
   // Set default date to today's date on component mount
   useEffect(() => {
@@ -82,27 +83,51 @@ const PaymentsPage = ({
     }
   });
 
-  // Compute transactions for "Who Owes Whom"
+  // Compute transactions for "Who Owes Whom" with reasons
   const computeNetBalances = (expenses, payments) => {
-    const balances = {}; // { "Alice->Bob": amount }
+    const balances = {}; // { "Alice->Bob": { amount, reasons: [{desc, amount}] } }
 
-    const addToBalance = (from, to, amount) => {
+    const addToBalance = (from, to, amount, reason) => {
       const key = `${from}->${to}`;
       const reverseKey = `${to}->${from}`;
 
       if (balances[reverseKey]) {
-        // offset against reverse
-        if (balances[reverseKey] > amount) {
-          balances[reverseKey] -= amount;
-        } else if (balances[reverseKey] < amount) {
-          balances[key] = amount - balances[reverseKey];
+        // Offset against reverse debt
+        if (balances[reverseKey].amount > amount) {
+          balances[reverseKey].amount -= amount;
+          // shrink reverse reasons (FIFO)
+          let payRemaining = amount;
+          for (let r of balances[reverseKey].reasons) {
+            if (payRemaining <= 0) break;
+            if (r.amount > payRemaining) {
+              r.amount -= payRemaining;
+              payRemaining = 0;
+            } else {
+              payRemaining -= r.amount;
+              r.amount = 0;
+            }
+          }
+          balances[reverseKey].reasons = balances[reverseKey].reasons.filter(
+            (r) => r.amount > 0
+          );
+          if (balances[reverseKey].amount <= 0.009) delete balances[reverseKey];
+        } else if (balances[reverseKey].amount < amount) {
+          const leftover = amount - balances[reverseKey].amount;
           delete balances[reverseKey];
+          balances[key] = {
+            amount: leftover,
+            reasons: [{ desc: reason, amount: leftover }],
+          };
         } else {
           // equal amounts cancel
           delete balances[reverseKey];
         }
       } else {
-        balances[key] = (balances[key] || 0) + amount;
+        if (!balances[key]) {
+          balances[key] = { amount: 0, reasons: [] };
+        }
+        balances[key].amount += amount;
+        balances[key].reasons.push({ desc: reason, amount });
       }
     };
 
@@ -114,21 +139,33 @@ const PaymentsPage = ({
         exp.items.forEach((item) => {
           const share = parseFloat(item.cost) / item.participants.length;
           item.participants.forEach((p) => {
-            if (p !== exp.paidBy) addToBalance(p, exp.paidBy, share);
+            if (p !== exp.paidBy)
+              addToBalance(
+                p,
+                exp.paidBy,
+                share,
+                `${item.name} in ${exp.description}`
+              );
           });
         });
       } else if (exp.splitType === "Percentages") {
         Object.entries(exp.percentages || {}).forEach(([participant, pct]) => {
           if (participant !== exp.paidBy) {
             const amt = (parseFloat(pct) / 100) * exp.totalAmount;
-            addToBalance(participant, exp.paidBy, amt);
+            addToBalance(
+              participant,
+              exp.paidBy,
+              amt,
+              `share of ${exp.description}`
+            );
           }
         });
       } else {
         // Equal split
         const share = exp.totalAmount / exp.participants.length;
         exp.participants.forEach((p) => {
-          if (p !== exp.paidBy) addToBalance(p, exp.paidBy, share);
+          if (p !== exp.paidBy)
+            addToBalance(p, exp.paidBy, share, `share of ${exp.description}`);
         });
       }
     });
@@ -136,15 +173,15 @@ const PaymentsPage = ({
     // Step 2: Subtract payments
     payments.forEach((pay) => {
       if (!pay.from || !pay.to || !pay.amount) return;
-      addToBalance(pay.to, pay.from, pay.amount); // reverse because it's a payment
+      addToBalance(pay.to, pay.from, pay.amount, pay.notes || "payment");
     });
 
-    // Convert balances map to array, filter out near-zero amounts
+    // Convert balances map to array, filter out near-zero
     return Object.entries(balances)
-      .filter(([_, amount]) => Math.abs(amount) > 0.009) // ignore anything < 1 cent
-      .map(([key, amount]) => {
+      .filter(([_, val]) => val.amount > 0.009)
+      .map(([key, val]) => {
         const [from, to] = key.split("->");
-        return { from, to, amount };
+        return { from, to, amount: val.amount, reasons: val.reasons };
       });
   };
 
@@ -162,18 +199,51 @@ const PaymentsPage = ({
         <h3 className="text-lg font-semibold mb-3">Who Owes Whom</h3>
         <ul className="space-y-2">
           {transactions.length > 0 ? (
-            transactions.map((t, index) => (
-              <li
-                key={index}
-                className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg"
-              >
-                <span className="font-bold">{t.from}</span> owes{" "}
-                <span className="font-bold">{t.to}</span>{" "}
-                <span className="font-semibold text-purple-600 dark:text-purple-400">
-                  ${t.amount.toFixed(2)}
-                </span>
-              </li>
-            ))
+            transactions.map((t, index) => {
+              const key = `${t.from}->${t.to}`;
+              const isOpen = openRows[key] || false;
+
+              return (
+                <li
+                  key={key}
+                  className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg"
+                >
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <span className="font-bold">{t.from}</span> owes{" "}
+                      <span className="font-bold">{t.to}</span>{" "}
+                      <span className="font-semibold text-purple-600 dark:text-purple-400">
+                        ${t.amount.toFixed(2)}
+                      </span>
+                    </div>
+
+                    {t.reasons?.length > 0 && (
+                      <button
+                        onClick={() =>
+                          setOpenRows((prev) => ({
+                            ...prev,
+                            [key]: !isOpen,
+                          }))
+                        }
+                        className="text-sm text-blue-500 hover:text-blue-600"
+                      >
+                        {isOpen ? "Hide details ▲" : "Show details ▼"}
+                      </button>
+                    )}
+                  </div>
+
+                  {isOpen && t.reasons?.length > 0 && (
+                    <ul className="ml-6 mt-2 list-disc text-sm text-gray-600 dark:text-gray-300">
+                      {t.reasons.map((r, i) => (
+                        <li key={i}>
+                          {r.desc}: ${r.amount.toFixed(2)}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              );
+            })
           ) : (
             <li className="text-gray-500 dark:text-gray-400">
               Everything is settled!
