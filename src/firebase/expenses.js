@@ -126,6 +126,7 @@ export const handleSaveExpense = async (
     percentages: expenseSplitType === "Percentages" ? percentages : {},
     items: expenseSplitType === "Itemized" ? expenseItems : [],
     totalAmount,
+    notes: expenseNotes || "",
   };
 
   try {

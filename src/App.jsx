@@ -203,6 +203,7 @@ function App() {
                       expenseSummary={expenseSummary}
                       handleExpenseModalOpen={handleExpenseModalOpen}
                       deleteExpense={deleteExpense}
+                      addOrUpdateExpense={addOrUpdateExpense}
                     />
                   }
                 />

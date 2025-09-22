@@ -1,7 +1,15 @@
-import React from "react";
+import React, { useState } from "react";
 import { TrashIcon, EditIcon } from "../components/Icons.jsx";
 
-const ExpensesPage = ({ expenses, handleExpenseModalOpen, deleteExpense }) => {
+const ExpensesPage = ({
+  expenses,
+  handleExpenseModalOpen,
+  deleteExpense,
+  addOrUpdateExpense, // ✅ use the Firestore updater from your hook
+}) => {
+  const [noteEditingId, setNoteEditingId] = useState(null);
+  const [tempNote, setTempNote] = useState("");
+
   // Filter out invalid expenses
   const validExpenses = expenses.filter(
     (exp) =>
@@ -32,6 +40,23 @@ const ExpensesPage = ({ expenses, handleExpenseModalOpen, deleteExpense }) => {
     return "N/A";
   };
 
+  const handleNoteSave = async (expId) => {
+    try {
+      // find the existing expense
+      const exp = expenses.find((e) => e.id === expId);
+      if (!exp) return;
+
+      // update in Firestore
+      await addOrUpdateExpense({ ...exp, notes: tempNote }, expId);
+
+      // reset local state
+      setNoteEditingId(null);
+      setTempNote("");
+    } catch (err) {
+      console.error("Error saving note:", err);
+    }
+  };
+
   return (
     <section>
       <h2 className="text-2xl font-bold mb-4">Expense Tracker</h2>
@@ -52,10 +77,17 @@ const ExpensesPage = ({ expenses, handleExpenseModalOpen, deleteExpense }) => {
               .map((exp) => (
                 <li
                   key={exp.id}
-                  className="flex justify-between items-center p-3 rounded-lg bg-gray-100 dark:bg-gray-800"
+                  className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center p-3 rounded-lg bg-gray-100 dark:bg-gray-800"
                 >
                   <div className="flex-grow">
-                    <div className="font-bold text-lg">{exp.description}</div>
+                    <div className="font-bold text-lg flex items-center gap-1">
+                      {exp.description}
+                      {exp.notes && (
+                        <span title="Has note" className="text-yellow-500">
+                          📌
+                        </span>
+                      )}
+                    </div>
                     <div className="text-sm text-gray-500 dark:text-gray-400">
                       Paid by {exp.paidBy} on{" "}
                       {exp.date
@@ -71,8 +103,15 @@ const ExpensesPage = ({ expenses, handleExpenseModalOpen, deleteExpense }) => {
                       {exp.totalAmount.toFixed(2)}, Participants:{" "}
                       {getParticipantsString(exp)}
                     </div>
+                    {/* Always show notes if they exist */}
+                    {exp.notes && noteEditingId !== exp.id && (
+                      <div className="mt-1 text-sm text-purple-700 dark:text-purple-300 italic">
+                        {exp.notes}
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2">
+
+                  <div className="flex items-center gap-2 text-sm">
                     <button
                       onClick={() => handleExpenseModalOpen(exp)}
                       className="text-purple-500 hover:text-purple-600 transition-colors"
@@ -85,7 +124,42 @@ const ExpensesPage = ({ expenses, handleExpenseModalOpen, deleteExpense }) => {
                     >
                       <TrashIcon className="w-5 h-5" />
                     </button>
+                    <button
+                      onClick={() => {
+                        setNoteEditingId(exp.id); // ✅ fixed (was pay.id)
+                        setTempNote(exp.notes || "");
+                      }}
+                      className="text-blue-500 hover:text-blue-600"
+                    >
+                      {exp.notes ? "Edit Note" : "Add Note"}
+                    </button>
                   </div>
+
+                  {/* Inline note editor */}
+                  {noteEditingId === exp.id && (
+                    <div className="mt-2 w-full">
+                      <textarea
+                        className="w-full p-2 border rounded-lg bg-white dark:bg-gray-900"
+                        rows="2"
+                        value={tempNote}
+                        onChange={(e) => setTempNote(e.target.value)}
+                      />
+                      <div className="flex gap-2 mt-2">
+                        <button
+                          onClick={() => handleNoteSave(exp.id)}
+                          className="px-3 py-1 bg-green-500 text-white rounded-md hover:bg-green-600"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => setNoteEditingId(null)}
+                          className="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded-md hover:bg-gray-400 dark:hover:bg-gray-500"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </li>
               ))
           ) : (
