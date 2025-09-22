@@ -139,11 +139,13 @@ const PaymentsPage = ({
       addToBalance(pay.to, pay.from, pay.amount); // reverse because it's a payment
     });
 
-    // Convert balances map to array
-    return Object.entries(balances).map(([key, amount]) => {
-      const [from, to] = key.split("->");
-      return { from, to, amount };
-    });
+    // Convert balances map to array, filter out near-zero amounts
+    return Object.entries(balances)
+      .filter(([_, amount]) => Math.abs(amount) > 0.009) // ignore anything < 1 cent
+      .map(([key, amount]) => {
+        const [from, to] = key.split("->");
+        return { from, to, amount };
+      });
   };
 
   // Filter out invalid payments
