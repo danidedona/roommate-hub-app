@@ -103,6 +103,7 @@ function App() {
   const [selectedParticipants, setSelectedParticipants] = useState([]);
   const [expenseDate, setExpenseDate] = useState("");
   const [editingExpenseId, setEditingExpenseId] = useState(null);
+  const [expenseNotes, setExpenseNotes] = useState("");
 
   // Settings Modal State
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -303,6 +304,8 @@ function App() {
             setNewNonRoommate={setNewNonRoommate}
             expenseModalErrors={expenseModalErrors}
             setExpenseModalErrors={setExpenseModalErrors}
+            expenseNotes={expenseNotes}
+            setExpenseNotes={setExpenseNotes}
           />
           <SettingsModal
             show={showSettingsModal}

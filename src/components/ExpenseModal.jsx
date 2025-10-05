@@ -27,6 +27,8 @@ const ExpenseModal = ({
   newNonRoommate,
   setNewNonRoommate,
   expenseModalErrors,
+  expenseNotes,
+  setExpenseNotes,
 }) => {
   const [amount, setAmount] = useState("");
 
@@ -64,6 +66,7 @@ const ExpenseModal = ({
         setPercentages(data.percentages || {});
         setExpenseItems(data.items || []);
         setAmount(data.totalAmount || "");
+        setExpenseNotes(data.notes || "");
       }
     };
     fetchExpense();
@@ -77,6 +80,7 @@ const ExpenseModal = ({
     setPercentages,
     setExpenseItems,
     setAmount,
+    setExpenseNotes,
   ]);
 
   const handleParticipantChange = (name) => {
@@ -460,7 +464,8 @@ const ExpenseModal = ({
               setPercentages,
               setAmount,
               setNewNonRoommate,
-              editingExpenseId
+              editingExpenseId,
+              expenseNotes
             )
           }
           className="bg-purple-600 text-white p-3 rounded-lg hover:bg-purple-700 transition-colors font-semibold shadow-md"

@@ -48,7 +48,8 @@ export const handleSaveExpense = async (
   setPercentages,
   setAmount,
   setNewNonRoommate,
-  editingId = null
+  editingId = null,
+  expenseNotes = ""
 ) => {
   // Basic checks
   if (!expenseDescription.trim()) {
