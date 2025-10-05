@@ -312,35 +312,39 @@ const PaymentsPage = ({
       <div className="p-4 sm:p-6 bg-gray-50 dark:bg-gray-700 rounded-xl shadow-lg">
         <h3 className="text-lg font-semibold mb-3">Recent Payments</h3>
         <ul className="space-y-3">
-          {validPayments.map((pay) => (
-            <li
-              key={pay.id}
-              className="p-3 rounded-lg bg-gray-100 dark:bg-gray-800 flex justify-between items-center"
-            >
-              <div>
-                <span className="text-green-500">${pay.amount.toFixed(2)}</span>{" "}
-                paid by {pay.from} to {pay.to}
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleEdit(pay)}
-                  className="text-blue-500 hover:text-blue-600"
-                >
-                  Edit
-                </button>
-
-                <button
-                  onClick={() => deletePayment(pay.id)}
-                  className="text-red-500 hover:text-red-600"
-                >
-                  Delete
-                </button>
-                <div className="text-sm text-gray-500 dark:text-gray-400">
-                  {new Date(pay.date).toLocaleDateString()}
+          {[...validPayments]
+            .sort((a, b) => new Date(b.date) - new Date(a.date)) // ✅ latest first
+            .map((pay) => (
+              <li
+                key={pay.id}
+                className="p-3 rounded-lg bg-gray-100 dark:bg-gray-800 flex justify-between items-center"
+              >
+                <div>
+                  <span className="text-green-500">
+                    ${pay.amount.toFixed(2)}
+                  </span>{" "}
+                  paid by {pay.from} to {pay.to}
                 </div>
-              </div>
-            </li>
-          ))}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleEdit(pay)}
+                    className="text-blue-500 hover:text-blue-600"
+                  >
+                    Edit
+                  </button>
+
+                  <button
+                    onClick={() => deletePayment(pay.id)}
+                    className="text-red-500 hover:text-red-600"
+                  >
+                    Delete
+                  </button>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    {new Date(pay.date).toLocaleDateString()}
+                  </div>
+                </div>
+              </li>
+            ))}
         </ul>
         {validPayments.length === 0 && (
           <p className="text-center text-gray-500 dark:text-gray-400">
